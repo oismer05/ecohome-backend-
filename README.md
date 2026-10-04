@@ -3,7 +3,6 @@
 API REST para la plataforma de e-commerce de **EcoHome Store** (vasos de vidrio reciclado, platos biodegradables y utensilios ecológicos).
 Evoluciona el prototipo Express + MVC en memoria hacia un backend con **persistencia en PostgreSQL**, **autenticación JWT** y **control de acceso por roles** (admin / cliente).
 
-> **Repositorio:** _(pegar aquí el enlace de tu repositorio de GitHub)_
 
 ## Stack
 Node.js 18+ · Express 5 · PostgreSQL · `pg` (pool de conexiones) · `jsonwebtoken` · `bcryptjs` · `helmet` · `cors` · `express-rate-limit`
