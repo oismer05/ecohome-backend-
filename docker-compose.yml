@@ -1,0 +1,17 @@
+# PostgreSQL local para desarrollo:  docker compose up -d
+services:
+  db:
+    image: postgres:16
+    container_name: ecohome-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ecohome
+      POSTGRES_PASSWORD: ecohome_pass
+      POSTGRES_DB: ecohome
+    ports:
+      - "5432:5432"
+    volumes:
+      - ecohome_pgdata:/var/lib/postgresql/data
+
+volumes:
+  ecohome_pgdata:
