@@ -4,8 +4,6 @@ API REST para la plataforma de e-commerce de **EcoHome Store** (vasos de vidrio 
 Evoluciona el prototipo Express + MVC en memoria hacia un backend con **persistencia en PostgreSQL**, **autenticación JWT** y **control de acceso por roles**.
 La **versión 2.0** (caso práctico de la unidad 2) añade un **chat interno en tiempo real** con **Socket.IO**, autenticado con el mismo JWT y con los mensajes guardados en PostgreSQL. El frontend (React) vive en un repositorio aparte: `ecohome-store-frontend`.
 
-> **Repositorio del backend:** _(pegar aquí el enlace de tu repositorio de GitHub)_
-> **Repositorio del frontend:** _(pegar aquí el enlace del repositorio del frontend)_
 
 ## Stack
 Node.js 18+ · Express 5 · **Socket.IO 4** · PostgreSQL · `pg` (pool de conexiones) · `jsonwebtoken` · `bcryptjs` · `helmet` · `cors` · `express-rate-limit`
