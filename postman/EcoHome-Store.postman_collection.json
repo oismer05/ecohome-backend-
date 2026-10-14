@@ -832,6 +832,27 @@
           ]
         }
       ]
+    },
+    {
+      "name": "Chat · GET /messages (últimos 10, personal interno)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{adminToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/messages",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "messages"
+          ]
+        }
+      }
     }
   ]
 }

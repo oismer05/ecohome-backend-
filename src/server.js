@@ -1,10 +1,12 @@
+import http from 'node:http';
 import { createApp } from './app.js';
+import { initChat } from './realtime/chat.js';
 import { env } from './config/env.js';
 import { pool } from './config/db.js';
 
 const app = createApp();
 
-
+// Verifica la conexión a PostgreSQL antes de recibir tráfico.
 try {
   await pool.query('SELECT 1');
   console.log(`[db] Conectado a PostgreSQL en ${env.db.host}:${env.db.port}/${env.db.database}`);
@@ -14,14 +16,19 @@ try {
   process.exit(1);
 }
 
-const server = app.listen(env.port, () => {
+// Socket.IO necesita un servidor HTTP que "envuelva" a Express: ambos comparten el puerto.
+const server = http.createServer(app);
+const io = initChat(server);
+
+server.listen(env.port, () => {
   console.log(`[api] Servidor corriendo en http://localhost:${env.port}`);
+  console.log(`[chat] Socket.IO listo en ws://localhost:${env.port}`);
 });
 
 // Cierre ordenado (reinicios, despliegues, Ctrl+C)
 function shutdown(signal) {
   console.log(`[api] ${signal} recibido, cerrando...`);
-  server.close(async () => {
+  io.close(async () => {          // cierra Socket.IO y el servidor HTTP
     await pool.end();
     process.exit(0);
   });

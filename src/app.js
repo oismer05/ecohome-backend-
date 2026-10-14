@@ -5,17 +5,18 @@ import rateLimit from 'express-rate-limit';
 import { env } from './config/env.js';
 import authRoutes from './routes/auth.routes.js';
 import productRoutes from './routes/product.routes.js';
+import messageRoutes from './routes/message.routes.js';
 import { errorHandler, notFoundHandler } from './middlewares/errorHandler.js';
 
 export function createApp() {
   const app = express();
 
   app.use(helmet());
-  app.use(cors());             
+  app.use(cors({ origin: env.corsOrigins.includes('*') ? true : env.corsOrigins }));
   app.use(express.json({ limit: '100kb' }));
 
   app.get('/', (req, res) => {
-    res.json({ service: 'EcoHome Store API', status: 'ok', version: '1.0.0' });
+    res.json({ service: 'EcoHome Store API', status: 'ok', version: '2.0.0', realtime: 'socket.io' });
   });
 
   // Freno a fuerza bruta sobre signup/login (se desactiva en pruebas automáticas)
@@ -30,6 +31,7 @@ export function createApp() {
 
   app.use('/auth', authLimiter, authRoutes);
   app.use('/products', productRoutes);
+  app.use('/messages', messageRoutes);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

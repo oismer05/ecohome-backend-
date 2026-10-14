@@ -1,7 +1,7 @@
 {
   "name": "ecohome-store-backend",
-  "version": "1.0.0",
-  "description": "Backend beta-ready de EcoHome Store: Express + MVC + PostgreSQL + JWT con roles (admin / cliente).",
+  "version": "2.0.0",
+  "description": "Backend beta-ready de EcoHome Store: Express + MVC + PostgreSQL + JWT con roles + chat en tiempo real con Socket.IO.",
   "type": "module",
   "main": "src/server.js",
   "scripts": {
@@ -9,7 +9,7 @@
     "dev": "node --watch src/server.js",
     "db:init": "node scripts/init-db.js",
     "db:seed": "node scripts/seed.js",
-    "test": "node --test tests/api.test.js"
+    "test": "node --test --test-concurrency=1 tests/api.test.js tests/chat.test.js"
   },
   "engines": {
     "node": ">=18"
@@ -23,6 +23,10 @@
     "express-rate-limit": "^8.7.0",
     "helmet": "^8.3.0",
     "jsonwebtoken": "^9.0.3",
-    "pg": "^8.23.1"
+    "pg": "^8.23.1",
+    "socket.io": "^4.8.4"
+  },
+  "devDependencies": {
+    "socket.io-client": "^4.8.4"
   }
 }

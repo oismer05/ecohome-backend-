@@ -1,6 +1,16 @@
-import jwt from 'jsonwebtoken';
-import { env } from '../config/env.js';
+import { verifyToken } from '../utils/jwt.js';
 
+/**
+ * authJWT: valida el token enviado en el header
+ *     Authorization: Bearer <token>
+ *
+ *  - Sin header / formato incorrecto -> 401 (no autenticado)
+ *  - Token manipulado o expirado     -> 401 (credencial no válida)
+ *  - Token válido                    -> req.user = { id, email, role } y next()
+ *
+ * Es stateless: el servidor no guarda sesiones, todo viaja en el token.
+ * Por eso sirve igual para la web, la app móvil y servicios externos.
+ */
 export function authJWT(req, res, next) {
   const header = req.headers.authorization;
 
@@ -14,8 +24,7 @@ export function authJWT(req, res, next) {
   }
 
   try {
-   
-    const payload = jwt.verify(token, env.jwt.secret, { algorithms: ['HS256'] });
+    const payload = verifyToken(token);
     req.user = { id: Number(payload.sub), email: payload.email, role: payload.role };
     return next();
   } catch (err) {
