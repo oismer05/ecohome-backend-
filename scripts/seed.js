@@ -3,6 +3,8 @@
 //  - Crea 3 cuentas de personal de demostración: ventas, logistica y soporte (STAFF_PASSWORD)
 //  - Carga 120 productos de ejemplo del catálogo EcoHome (solo si la tabla está vacía)
 //  - Carga una conversación de ejemplo en el chat (solo si no hay mensajes)
+//  - Unidad 3: crea a Arturo (admin del catálogo) con 14 productos a su nombre,
+//    para demostrar la trazabilidad y el contador Nombre (N): de 14 a 15 al crear uno
 import bcrypt from 'bcryptjs';
 import { pool } from '../src/config/db.js';
 
@@ -15,6 +17,18 @@ const staff = [
   { name: 'Valentina Ríos', email: 'ventas@ecohome.com', role: 'ventas' },
   { name: 'Mateo Cárdenas', email: 'logistica@ecohome.com', role: 'logistica' },
   { name: 'Camila Duarte', email: 'soporte@ecohome.com', role: 'soporte' },
+  { name: 'Arturo', email: 'arturo@ecohome.com', role: 'admin' },
+];
+
+// Productos que registró Arturo (created_by = Arturo): línea "Hogar Sustentable"
+const arturoProducts = [
+  ['Jarra de vidrio reciclado 1 L', 24900], ['Frasco hermético de vidrio 500 ml', 13900],
+  ['Set de 4 vasos Ámbar', 36500], ['Botella de vidrio con funda de corcho', 29900],
+  ['Plato hondo de hoja de palma', 6900], ['Bandeja de bagazo de caña', 8400],
+  ['Cepillo de dientes de bambú x4', 15900], ['Bolsa de malla de algodón', 11200],
+  ['Envoltura de cera de abejas x3', 21500], ['Cuchara de madera de olivo', 9800],
+  ['Esponja vegetal de luffa', 5400], ['Portavasos de corcho x6', 12600],
+  ['Taza de café de cáscara de café', 18900], ['Pitillos de acero con cepillo', 14500],
 ];
 
 // Conversación de ejemplo (campaña "Hogar Sustentable"): 14 mensajes, para que el
@@ -85,7 +99,19 @@ try {
     console.log(`[seed] ${conversation.length} mensajes de ejemplo cargados en el chat`);
   }
 
-  const { rows } = await pool.query('SELECT COUNT(*)::int AS n FROM products');
+  const { rows: arturo } = await pool.query("SELECT id FROM users WHERE email = 'arturo@ecohome.com'");
+  const { rows: own } = await pool.query(
+    'SELECT COUNT(*)::int AS n FROM products WHERE created_by = $1', [arturo[0].id]);
+  if (own[0].n === 0) {
+    for (const [name, price] of arturoProducts) {
+      await pool.query(
+        'INSERT INTO products (name, price, in_stock, created_by, updated_by) VALUES ($1, $2, TRUE, $3, $3)',
+        [name, price, arturo[0].id]);
+    }
+    console.log(`[seed] ${arturoProducts.length} productos creados por Arturo`);
+  }
+
+  const { rows } = await pool.query('SELECT COUNT(*)::int AS n FROM products WHERE created_by IS NULL');
   if (rows[0].n === 0) {
     let count = 0;
     for (const f of families) {
@@ -100,7 +126,7 @@ try {
     }
     console.log(`[seed] ${count} productos cargados`);
   } else {
-    console.log(`[seed] La tabla products ya tiene ${rows[0].n} registros; no se cargan más`);
+    console.log(`[seed] El catálogo inicial ya tiene ${rows[0].n} productos; no se cargan más`);
   }
 } catch (err) {
   console.error('[seed] Error:', err.message);

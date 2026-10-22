@@ -853,6 +853,51 @@
           ]
         }
       }
+    },
+    {
+      "name": "Unidad 3 · GET /users/me/stats (Nombre (N))",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{adminToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/users/me/stats",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "users",
+            "me",
+            "stats"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Unidad 3 · GET /users/stats (contador por usuario)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{adminToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/users/stats",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "users",
+            "stats"
+          ]
+        }
+      }
     }
   ]
 }

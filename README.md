@@ -1,9 +1,13 @@
-# EcoHome Store · Backend v2 (API REST + chat en tiempo real)
+# EcoHome Store · Backend v3 (API REST + chat en tiempo real + trazabilidad)
 
 API REST para la plataforma de e-commerce de **EcoHome Store** (vasos de vidrio reciclado, platos biodegradables y utensilios ecológicos).
 Evoluciona el prototipo Express + MVC en memoria hacia un backend con **persistencia en PostgreSQL**, **autenticación JWT** y **control de acceso por roles**.
 La **versión 2.0** (caso práctico de la unidad 2) añade un **chat interno en tiempo real** con **Socket.IO**, autenticado con el mismo JWT y con los mensajes guardados en PostgreSQL. El frontend (React) vive en un repositorio aparte: `ecohome-store-frontend`.
+La **versión 3.0** (caso práctico de la unidad 3) suma la **app móvil Flutter** (`ecohome-store-flutter`), que consume este mismo backend sin endpoints paralelos, y la **trazabilidad del catálogo**: cada producto queda ligado a quien lo creó y cada usuario ve su contador «Nombre (N)».
 
+> **Repositorio del backend:** _(pegar aquí el enlace de tu repositorio de GitHub)_
+> **Repositorio del frontend:** _(pegar aquí el enlace del repositorio del frontend)_
+> **Repositorio de la app Flutter:** _(pegar aquí el enlace del repositorio de Flutter)_
 
 ## Stack
 Node.js 18+ · Express 5 · **Socket.IO 4** · PostgreSQL · `pg` (pool de conexiones) · `jsonwebtoken` · `bcryptjs` · `helmet` · `cors` · `express-rate-limit`
@@ -29,6 +33,7 @@ Node.js 18+ · Express 5 · **Socket.IO 4** · PostgreSQL · `pg` (pool de conex
 │   └── server.js                  # http.createServer(app) + Socket.IO en el mismo puerto
 ├── tests/api.test.js              # 19 pruebas de la API REST (BD real)
 ├── tests/chat.test.js             # 13 pruebas del chat (JWT, historial, difusión, persistencia)
+├── tests/traceability.test.js     # 8 pruebas: creador, contador Nombre (N), aviso en vivo
 ├── postman/EcoHome-Store.postman_collection.json
 ├── docker-compose.yml             # PostgreSQL 16 para desarrollo
 └── .env.example
@@ -54,6 +59,8 @@ npm run db:seed
 npm start                   # API y WebSocket en http://localhost:3000
 ```
 
+**CORS:** además de `CORS_ORIGIN`, fuera de producción se acepta cualquier puerto de `localhost`, porque `flutter run -d chrome` abre la app en un puerto aleatorio. Las apps Android/iOS no envían `Origin`.
+
 Variables (`.env`): `PORT`, `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASS`, `DB_NAME`, `JWT_SECRET` (obligatoria), `JWT_EXPIRES_IN`, `ADMIN_NAME`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `STAFF_PASSWORD` (contraseña de las cuentas de demo del personal) y `CORS_ORIGIN` (URL(s) del frontend, separadas por coma; por defecto `http://localhost:5173`).
 
 ## Endpoints
@@ -64,6 +71,8 @@ Variables (`.env`): `PORT`, `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASS`, `DB_NAME
 | POST | `/auth/login` | Público → devuelve JWT | 200, 400, 401 |
 | GET | `/auth/me` | JWT | 200, 401 |
 | GET | `/messages` | JWT + personal interno (admin, ventas, logística, soporte) | 200, 401, 403 |
+| GET | `/users/me/stats` | JWT → `{ user, productsCreated, label: "Nombre (N)" }` | 200, 401 |
+| GET | `/users/stats` | JWT → contador de cada creador, de mayor a menor | 200, 401 |
 | GET | `/products` | Público | 200 |
 | GET | `/products/:id` | Público | 200, 400, 404 |
 | POST | `/products` | JWT + rol **admin** | 201, 400, 401, 403 |
@@ -72,6 +81,14 @@ Variables (`.env`): `PORT`, `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASS`, `DB_NAME
 | DELETE | `/products/:id` | JWT + rol **admin** | 200, 401, 403, 404 |
 
 Header para rutas protegidas: `Authorization: Bearer <token>`
+
+## Trazabilidad del catálogo (unidad 3)
+
+- `products.created_by` es una llave foránea a `users(id)`. Al crear un producto, el creador **se toma del JWT** (`req.user.id`); un `created_by` enviado en el body se ignora. Al editar se actualiza `updated_by`, pero el creador original se conserva.
+- `GET /products` y `GET /products/:id` devuelven además `creator: { id, name }` (o `null` para el catálogo inicial). Los campos anteriores no cambian, así que React y Flutter usan el mismo contrato.
+- `GET /users/me/stats` entrega el contador del usuario autenticado (`label: "Arturo (14)"`) y `GET /users/stats` el de todos los creadores.
+- Al crear, editar o borrar un producto el servidor emite `products-changed` por Socket.IO: la web y la app refrescan el listado y el contador sin recargar.
+- Demostración: `bash scripts/traceability-demo.sh` (login de Arturo → contador 14 → crear producto → aparece el creador → contador 15).
 
 ## Chat en tiempo real (Socket.IO)
 
@@ -94,10 +111,11 @@ Socket.IO comparte el servidor HTTP y el puerto de Express (`ws://localhost:3000
 | cliente → servidor | `new-message` | `{ text }` (con confirmación `ack`: `{ ok, id }` o `{ ok:false, code, error }`) |
 | servidor → todos | `new-message` | Mensaje **ya guardado**: `{ id, user_id, user, role, text, created_at }` |
 | servidor → todos | `online-users` | Personas conectadas |
+| servidor → todos | `products-changed` | `{ action, productId, product, by }` cuando cambia el catálogo |
 
 **Reglas.** El mensaje se **guarda primero** en `messages` y solo si se guardó se reenvía con `io.emit`. El autor sale del socket autenticado: cualquier campo `user` enviado por el cliente se ignora. Se valida texto no vacío y máximo 500 caracteres, y hay un límite de 8 mensajes cada 10 s por conexión (`EMPTY`, `TOO_LONG`, `RATE_LIMIT`, `SAVE_FAILED`).
 
-**Roles.** `admin`, `ventas`, `logistica` y `soporte` pueden usar el chat; `cliente` no. El CRUD de productos sigue siendo solo para `admin`. Cuentas de demo (`npm run db:seed`): `ventas@ecohome.com`, `logistica@ecohome.com`, `soporte@ecohome.com` (contraseña `STAFF_PASSWORD`, por defecto `Equipo12345!`).
+**Roles.** `admin`, `ventas`, `logistica` y `soporte` pueden usar el chat; `cliente` no. El CRUD de productos sigue siendo solo para `admin`. Cuentas de demo (`npm run db:seed`): `arturo@ecohome.com` (admin con 14 productos creados), `ventas@ecohome.com`, `logistica@ecohome.com`, `soporte@ecohome.com` (contraseña `STAFF_PASSWORD`, por defecto `Equipo12345!`).
 
 **Verificación.**
 ```bash
@@ -140,7 +158,7 @@ Para probarlo con el navegador, levante también el frontend (`ecohome-store-fro
 
 ```bash
 # Automáticas (usan la base ecohome_test; créela antes: CREATE DATABASE ecohome_test;)
-npm test                      # 32 pruebas: 19 de la API + 13 del chat
+npm test                      # 40 pruebas: 19 de la API + 13 del chat + 8 de trazabilidad
 
 # Flujo completo con cURL (servidor corriendo; requiere curl y jq)
 bash scripts/demo-flow.sh
@@ -155,3 +173,10 @@ El código ya separa responsabilidades que luego pueden convertirse en servicios
 
 ## Escalabilidad del chat
 Hoy hay una sola instancia de Node, así que `io.emit` llega a todos los conectados. Para varias instancias detrás de un balanceador se añadiría el adaptador de Redis de Socket.IO (`@socket.io/redis-adapter`) y *sticky sessions*; el JWT stateless y la BD compartida ya permiten escalar sin cambios de diseño. Una app móvil puede usar el mismo protocolo con `socket.io-client`.
+
+## Despliegue con Docker
+El `Dockerfile` empaqueta el backend sobre `node:22-alpine` y expone el puerto 3000 (API y Socket.IO juntos). Las credenciales de la base de datos y `JWT_SECRET` se pasan como variables de entorno del servicio, no dentro de la imagen.
+```bash
+docker build -t ecohome-backend .
+docker run -p 3000:3000 --env-file .env ecohome-backend
+```

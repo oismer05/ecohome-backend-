@@ -4,6 +4,8 @@ import { STAFF_ROLES } from '../config/roles.js';
 import { UserModel } from '../models/user.model.js';
 import { MessageModel } from '../models/message.model.js';
 import { verifyToken } from '../utils/jwt.js';
+import { attachCatalogIo } from './catalog.js';
+import { corsOrigin } from '../config/cors.js';
 
 const HISTORY_SIZE = 10;        // el usuario ve los últimos 10 mensajes al entrar
 const MAX_TEXT_LENGTH = 500;
@@ -25,11 +27,12 @@ function authError(code, message) {
  *   servidor → cliente   "messages"      últimos 10 mensajes (solo al conectarse)
  *   servidor → todos     "new-message"   mensaje ya guardado en la BD
  *   servidor → todos     "online-users"  quién está conectado
+ *   servidor → todos     "products-changed"  se creó, editó o borró un producto (unidad 3)
  *   cliente  → servidor  "new-message"   { text }
  */
 export function initChat(httpServer) {
   const io = new Server(httpServer, {
-    cors: { origin: env.corsOrigins.includes('*') ? true : env.corsOrigins },
+    cors: { origin: corsOrigin() },
   });
 
   // ---------- 1) Autenticación en el handshake ---------------------------------
@@ -132,5 +135,6 @@ export function initChat(httpServer) {
     }
   });
 
+  attachCatalogIo(io);   // la API REST avisa cambios del catálogo por este mismo servidor
   return io;
 }
